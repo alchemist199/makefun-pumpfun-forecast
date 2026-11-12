@@ -25,6 +25,12 @@ seven answer reads. `main.py` (Python 3.13, standard library only) reads
      forecast's unnamed share — which is exactly what scores when a newcomer
      actually takes a place (3 of the top 5 at the practice's last read were
      coins the history never named).
+   - *Horizon-aware newcomer spread (revision 2):* the newcomers' sigma is
+     0.20 inside the first hour, then widens as sqrt(1 + (h−1)/1.5), because
+     at a long-horizon read the newcomers are a mix of ages, not one fresh
+     cohort. A fixed tight sigma let old coins dominate place 1 by diffusion
+     noise at 7–13 h (unnamed share 0.12–0.41 there); the horizon-aware
+     spread keeps it near 0.7 per place, matching the turnover regime.
 3. **Average over reads.** One forecast is scored at every read, so the
    mixture over the seven reads is the honest single forecast.
 4. **Honest naming rule.** A coin (or size bin) is named at a place only when
@@ -47,12 +53,19 @@ final's 7–13 h horizon) instead of betting everything on today's leaders.
 
 - `MAKEFUN_INPUT_DIR=<kit>/input MAKEFUN_OUTPUT_DIR=<out> python3 main.py`
   runs in ~1 s; two runs write byte-identical output.
-- Practice forecast: 6,831 bytes, exactly the keys `probabilities`, `top5`,
+- Practice forecast: 6,465 bytes, exactly the keys `probabilities`, `top5`,
   `sizes`; top5 is 5 distinct mints, all in the history; every place's
   probability and size sums are ≤ 1; every named mint appears in the history.
 - Order score at the practice's last read (whose top 5 the rules publish):
-  **−21.86**, vs the house baseline's −23.21 on the same read. The baseline's
-  mean order score over all seven practice reads is −21.38, and its total
-  practice score is −40.41; this entry's honest sizes and larger unnamed
-  share are designed to improve on both parts.
+  **−21.63**, vs the house baseline's −23.21 on the same read and −21.86
+  for the first revision. The baseline's mean order score over all seven
+  practice reads is −21.38, and its total practice score is −40.41; this
+  entry's honest sizes and larger unnamed share are designed to improve on
+  both parts.
+- Hold-out backtest (truncate the history at 20:30 / 20:40, score the
+  forecast against the later marks' real charts, order + sizes): grand mean
+  **−29.52**, vs −33.87 for the first revision and ≈−31.7 for the house
+  baseline on the same cuts. (Short-horizon backtests favour persistence,
+  so they understate the edge at the final's 7–13 h horizon, where the
+  turnover — and the honest unnamed share — dominate.)
 - A synthetic 66-mark final-shape history also runs in ~1 s with valid output.
