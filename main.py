@@ -15,6 +15,11 @@ Model (stdlib only, deterministic, no network):
         level new rockets reached in the history. They compete for the top 5
         exactly like known coins; their mass becomes the forecast's unnamed
         share, which is what scores when a newcomer actually takes a place.
+        Their spread is horizon-aware: tight (sigma 0.20) inside the first
+        hour, widening as sqrt(1 + (h-1)/1.5) after that, because at a
+        long-horizon read the newcomers are a mix of ages, not one fresh
+        cohort. This keeps the 7-13 h unnamed share near 0.7 per place
+        instead of letting old coins dominate place 1 by diffusion noise.
   * Average the per-read distributions over the seven reads (one forecast is
     scored at every read, so the mixture is the honest single forecast).
   * Name a coin (or a size bin) at a place only when its probability beats
@@ -46,8 +51,13 @@ GROWTH_TAU_H = 1.5        # growth decays over ~this many hours
 GROWTH_CAP = 0.45         # max remaining log10 growth credited from a trend
 POOL_SIGMA_PER_SQRT_H = 0.22
 CURVE_SIGMA_PER_SQRT_H = 0.25
-NEWCOMER_SIGMA = 0.30
+NEWCOMER_SIGMA = 0.20
 NEWCOMER_HEAT_PER_H = 0.02  # newcomer level drifts up as the day heats up
+# Newcomers are a mix of ages at the read, so their spread grows with the
+# horizon: tight (0.20) inside the first hour, widening as sqrt(1 + (h-1)/1.5)
+# after that. This keeps the long-horizon (7-13 h) unnamed share honest
+# (~0.7 per place) instead of letting old coins dominate place 1 by noise.
+NEWCOMER_SIGMA_HORIZON = 1.5
 
 
 def parse_ts(s):
@@ -185,8 +195,14 @@ def main():
                 noise = rng.gauss(0.0, c["sigma"] * math.sqrt(h)) if h > 0 \
                     else 0.0
                 entries.append((c["x0"] + drift + noise, c["mint"]))
+            # Horizon-aware newcomer spread: newcomers drawn around new_mu
+            # with a sigma that widens after the first hour, because at a
+            # long-horizon read they are a mix of ages, not one fresh cohort.
+            new_sig = (NEWCOMER_SIGMA
+                       * math.sqrt(1.0 + max(0.0, h - 1.0)
+                                   / NEWCOMER_SIGMA_HORIZON))
             for _ in range(N_NEW):
-                entries.append((rng.gauss(new_mu, NEWCOMER_SIGMA), None))
+                entries.append((rng.gauss(new_mu, new_sig), None))
             top = heapq.nlargest(places, entries, key=lambda e: e[0])
             for k, (lc, mint) in enumerate(top):
                 if mint is None:
